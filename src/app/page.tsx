@@ -1,65 +1,137 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState } from "react";
+import { Dropzone } from "@/components/Dropzone";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { ModelViewer } from "@/components/ModelViewer";
+import { ViewerControls } from "@/components/ViewerControls";
+import { Box, ArrowLeft } from "lucide-react";
+
+type AppState = "idle" | "generating" | "viewing";
 
 export default function Home() {
+  const [appState, setAppState] = useState<AppState>("idle");
+  const [modelUrl, setModelUrl] = useState<string | null>(null);
+  const [isStudioLight, setIsStudioLight] = useState(true);
+
+  // Async UX Flow State
+  const [loadingMessage, setLoadingMessage] = useState("");
+  const [progress, setProgress] = useState(0);
+
+  // STEP 3: Multi-stage "AI generation" UX pipeline
+  const handleFileSelect = async (file: File) => {
+    // 1. Immediately show the Loading Overlay
+    setAppState("generating");
+
+    // Convert the uploaded File into a local Blob URL early, but don't show it yet
+    const localUrl = URL.createObjectURL(file);
+
+    // 2. Simulate Stage 1: Removing background
+    setLoadingMessage("Removing background...");
+    setProgress(15);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // 3. Simulate Stage 2: Classifying subject
+    setLoadingMessage("Classifying subject...");
+    setProgress(40);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // 4. Simulate Stage 3: Generating geometry
+    setLoadingMessage("Generating geometry...");
+    setProgress(75);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    // 5. Simulate Stage 4: Applying textures
+    setLoadingMessage("Applying textures...");
+    setProgress(95);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // 6. Complete and Transition
+    setProgress(100);
+    await new Promise((resolve) => setTimeout(resolve, 500)); // Brief pause at 100%
+
+    setModelUrl(localUrl);
+    setAppState("viewing"); // Transition to ModelViewer
+  };
+
+  const handleToggleLight = () => {
+    setIsStudioLight((prev) => !prev);
+  };
+
+  const handleExport = () => {
+    if (!modelUrl) return;
+    const link = document.createElement("a");
+    link.href = modelUrl;
+    link.download = "dimension_x_image.png";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleReset = () => {
+    if (modelUrl) URL.revokeObjectURL(modelUrl);
+    setModelUrl(null);
+    setAppState("idle");
+    setProgress(0); // Reset UX flow
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="h-screen w-screen bg-[#0f172a] text-slate-100 flex flex-col relative overflow-hidden">
+      {/* Header */}
+      <header className="w-full shrink-0 p-4 md:p-6 flex items-center justify-between z-40 bg-slate-900/50 backdrop-blur-md border-b border-slate-700/50 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#0ea5e9]/20 rounded-lg text-[#0ea5e9]">
+            <Box className="w-6 h-6" />
+          </div>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 to-[#0ea5e9]">
+            DIMENSION-X
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        {appState === "viewing" && (
+          <button
+            onClick={handleReset}
+            className="flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            <ArrowLeft className="w-4 h-4" /> Back to Upload
+          </button>
+        )}
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 w-full h-full relative z-10 flex flex-col items-center justify-center p-4 md:p-8">
+
+        {appState === "idle" && (
+          <div className="w-full max-w-4xl flex flex-col items-center">
+            <h2 className="text-4xl md:text-6xl font-extrabold text-center mb-6">
+              Upload Image
+            </h2>
+            <Dropzone onFileSelect={handleFileSelect} disabled={appState !== "idle"} />
+          </div>
+        )}
+
+        {appState === "generating" && (
+          <LoadingOverlay statusMessage={loadingMessage} progress={progress} />
+        )}
+
+        {appState === "viewing" && modelUrl && (
+          <div className="w-full h-full max-w-6xl relative rounded-3xl overflow-hidden border border-slate-700/50 shadow-2xl">
+            <ModelViewer imageUrl={modelUrl} isStudioLight={isStudioLight} />
+
+            <ViewerControls
+              isStudioLight={isStudioLight}
+              onToggleLight={handleToggleLight}
+              onExport={handleExport}
+              onReset={handleReset}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* Background glow */}
+      <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[#0ea5e9]/10 blur-[120px] pointer-events-none z-0" />
+      <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-slate-800/80 blur-[130px] pointer-events-none z-0" />
+    </main>
   );
 }
