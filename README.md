@@ -56,4 +56,8 @@ Real AI models (TripoSR / Zero-1-to-3 / Meshy) can be integrated later by replac
 
 ```bash
 npm install
+<<<<<<< HEAD
 npm run dev
+=======
+npm run dev
+>>>>>>> 594ed759dcec5ef195971932c98d7f73e6731dec
